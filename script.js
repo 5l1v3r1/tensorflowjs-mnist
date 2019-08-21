@@ -5,7 +5,6 @@ let model;
 let signaturePad;
 
 function initSignaturePad() {
-  // init SignaturePad
   drawElement = document.getElementById('draw-area');
   signaturePad = new SignaturePad(drawElement, {
      minWidth: 6,
@@ -38,14 +37,10 @@ async function showExamples(data) {
     canvas.height = 28;
     canvas.style = 'margin: 4px;';
 
-
     await tf.browser.toPixels(imageTensor, canvas);
     surface.drawArea.appendChild(canvas);
 
     let imageData = canvas.getContext('2d').getImageData(0, 0, 28, 28);
-    // for (let i = 0; i < imageData.data.length; i+=4) {
-    //   console.log(imageData.data[i] + "," + imageData.data[i+1] + "," + imageData.data[i+2] + "," + imageData.data[i+3])
-    // }
 
     imageTensor.dispose();
   }
@@ -119,8 +114,8 @@ async function train(model, data) {
   const fitCallbacks = tfvis.show.fitCallbacks(container, metrics);
 
   const BATCH_SIZE = 512;
-  const TRAIN_DATA_SIZE = 5500 * 0.1;
-  const TEST_DATA_SIZE = 1000 * 0.1;
+  const TRAIN_DATA_SIZE = 5500;
+  const TEST_DATA_SIZE = 1000;
 
   const [trainXs, trainYs] = tf.tidy(() => {
     const d = data.nextTrainBatch(TRAIN_DATA_SIZE);
@@ -161,26 +156,17 @@ function predict() {
   const inputHeight = 28;
 
   // resize
-  const tmpCanvas = document.createElement('canvas').getContext('2d');
-  tmpCanvas.drawImage(drawElement, 0, 0, inputWidth, inputHeight);
-  let imageData = tmpCanvas.getImageData(0, 0, inputWidth, inputHeight);
+  let ctx = document.createElement('canvas').getContext('2d');
+  ctx.drawImage(drawElement, 0, 0, inputWidth, inputHeight);
+  let imageData = ctx.getImageData(0, 0, inputWidth, inputHeight);
 
-  // for (let i = 0; i < imageData.data.length; i+=4) {
-  //   // R: imageData.data[i] G: imageData.data[i+1] B: imageData.data[i+2] A:imageData.data[i+3]
-  //   console.log(imageData.data[i] + "," + imageData.data[i+1] + "," + imageData.data[i+2] + "," + imageData.data[i+3])
-  // }
-
-  const score = tf.tidy(() => {
-    const channels = 1; // grayscale
-    let input = tf.browser.fromPixels(imageData, channels);
-
-    input = tf.cast(input, 'float32').div(tf.scalar(255));
-    input = input.expandDims();
+  let score = tf.tidy(() => {
+    let input = tf.browser.fromPixels(imageData, 1).reshape([1, 28, 28, 1]).cast('float32').div(tf.scalar(255));
     return model.predict(input);
   });
 
   let maxAccuracy = score.dataSync().indexOf(Math.max.apply(null, score.dataSync()));
-  const elements = document.querySelectorAll(".confidence");
+  let elements = document.querySelectorAll(".confidence");
   let i = 0;
   elements.forEach(el => {
     el.parentNode.classList.remove('is-selected');
